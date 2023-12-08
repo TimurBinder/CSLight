@@ -30,15 +30,28 @@
         private ConsoleColor _defaultColor;
         private ConsoleColor _selectedColor;
         private List<string> _itemsList;
-        private int _selectedIndex;
-        private bool _isOpen;
 
-        public Menu(ConsoleColor defaultColor, ConsoleColor selectedColor, string[] itemsArray)
+        private bool _isOpen;
+        private int _selectedIndex;
+        private int _positionX;
+        private int _positionY;
+
+        public Menu(int positionX, int positionY)
         {
-            _defaultColor = defaultColor;
-            _selectedColor = selectedColor;
-            _itemsList = new List<string>(itemsArray);
+            _defaultColor = Console.ForegroundColor;
+            _selectedColor = ConsoleColor.Green;
             _selectedIndex = 0;
+            _positionX = positionX;
+            _positionY = positionY;
+            _itemsList = new List<string>();
+        }
+        public Menu(string[] itemsArray, int positionX, int positionY) : this(positionX, positionY)
+        {
+            _itemsList = new List<string>(itemsArray);
+        }
+        public Menu(List<string> itemsList, int positionX, int positionY) : this(positionX, positionY)
+        {
+            _itemsList = itemsList;
         }
 
         public void AddItem(string name)
@@ -51,7 +64,7 @@
             _itemsList.RemoveAt(index);
         }
 
-        public int TryGetItemIndex(out int index)
+        public bool TryGetItemIndex(out int index)
         {
             _isOpen = true;
 
@@ -62,14 +75,17 @@
                 ConsoleKeyInfo userKey = Console.ReadKey();
 
                 if (KeyInputHandle(userKey) == false)
+                {
+                    index = -1;
                     return false;
+                }
             }
 
             index = _selectedIndex;
             return true;
         }
 
-        private void KeyInputHandle(ConsoleKeyInfo userKey)
+        private bool KeyInputHandle(ConsoleKeyInfo userKey)
         {
             switch (userKey.Key)
             {
@@ -107,12 +123,12 @@
         {
             for (var i = 0; i < _itemsList.Count; i++)
             {
-                if (i == selectedIndex)
-                    Console.ForegroundColor = selectedColor;
+                if (i == _selectedIndex)
+                    Console.ForegroundColor = _selectedColor;
 
-                _itemsList[i].ShowInfo();
+                Console.WriteLine(_itemsList[i]);
 
-                Console.ForegroundColor = defaultColor;
+                Console.ForegroundColor = _defaultColor;
             }
         }
     }
@@ -120,6 +136,8 @@
     class Station
     {
         private Random _random;
+        private Menu _menu;
+
         private string[] _pathPoints;
         private List<Direction> _directionsList;
         private List<Train> _trainsList;
@@ -130,6 +148,8 @@
         public Station()
         {
             _random = new Random();
+            _menu = new Menu(0, 0);
+
             _pathPoints = new string[]
             {
                 "Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург", "Казань",
@@ -141,63 +161,15 @@
                 "Кемерово", "Набережные Челны", "Оренбург", "Новокузнецк", "Балашиха"
             };
 
+            _directionsList = new List<Direction>();
+
             _minDirectionPassengersCount = 300;
             _maxDirectionPassengersCount = 800;
         }
 
-        public Direction TryGetDirection(out Direction direction)
+        public bool TryGetDirection(out Direction direction)
         {
-            bool isOpenMenu = true;
-            ConsoleColor defaultColor = Console.ForegroundColor;
-            ConsoleColor selectedColor = ConsoleColor.Green;
-            int selectedIndex = 0;
 
-            while (isOpenMenu)
-            {
-                for (var i = 0; i < _directionsList.Count; i++)
-                {
-                    if (i == selectedIndex)
-                        Console.ForegroundColor = selectedColor;
-
-                    _directionsList[i].ShowInfo();
-
-                    Console.ForegroundColor = defaultColor;
-                }
-
-                ConsoleKeyInfo userKey = Console.ReadKey();
-
-                switch (userKey.Key)
-                {
-                    case ConsoleKey.UpArrow:
-                        if (selectedIndex > 0)
-                            selectedIndex--;
-                        else 
-                            selectedIndex = _directionsList.Count - 1;
-
-                        break;
-
-                    case ConsoleKey.DownArrow:
-                        if (selectedIndex < _directionsList.Count - 1)
-                            selectedIndex++;
-                        else
-                            selectedIndex = 0;
-
-                        break;
-
-                    case ConsoleKey.Enter:
-                        isOpenMenu = false;
-                        break;
-
-                    case ConsoleKey.Escape:
-                        direction = null;
-                        return false;
-                        
-                }
-            }
-
-            direction = _directionsList[selectedIndex];
-            _directionsList.RemoveAt(selectedIndex);
-            return true;
         }
 
         public void AddRandomDirection()
@@ -217,7 +189,9 @@
             string startPoint = _pathPoints[startPointIndex];
             string finishPoint = _pathPoints[finishPointIndex];
 
-            _directionsList.Add(new Direction(startPoint, finishPoint, passengersCount));
+            Direction direction = new Direction(startPoint, finishPoint, passengersCount);
+            _directionsList.Add(direction);
+            _menu.AddItem(direction.GetInfo());
         }
 
         public void AddTrain()
@@ -239,9 +213,9 @@
         public string FinishPoint { get; }
         public int PassengersCount { get; }
 
-        public void ShowInfo()
+        public string GetInfo()
         {
-            Console.WriteLine($"Путь {StartPoint}-{FinishPoint}: всего пассажиров {PassengersCount});
+            return $"Путь {StartPoint}-{FinishPoint}: всего пассажиров {PassengersCount}";
         }
     }
 
